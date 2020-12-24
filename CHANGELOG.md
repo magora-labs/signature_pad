@@ -1,5 +1,14 @@
 ## Changelog
 
+### master
+
+### 3.0.0-beta.4
+#### Bug fixes
+- Fix race condition / edge case in _strokeUpdate. ([ndbroadbent](https://github.com/ndbroadbent); fixes [#480](https://github.com/szimek/signature_pad/issues/480))
+#### Breaking changes
+- Remove CommonJS build
+- Updated development dependencies (TS 4.x; tslint -> eslint)
+
 ### 3.0.0-beta.3
 #### Features
 - Add initial support for pointer events
@@ -28,7 +37,7 @@ dist/signature_pad.m.min.js   # minified ES module
 - Change structure of data returned from `SignaturePad#toData method. Each point group now has 2 fields: `color` and `points`. Individual points no longer have `color` field.
 
 #### Bug Fixes
-- Allow scrolling via touch after calling `SignaturePad#off`([felixhammerl](https://github.com/felixhammerl) and [patrickbussmann](https://github.com/patrickbussmann)).
+- Allow scrolling via touch after calling `SignaturePad#off` ([felixhammerl](https://github.com/felixhammerl) and [patrickbussmann](https://github.com/patrickbussmann)).
 
 #### Features
 - Add very basic unit tests for Point and Bezier classes.
