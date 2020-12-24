@@ -10,17 +10,16 @@
  */
 
 import { Bezier } from './bezier';
-import { IBasicPoint, Point } from './point';
+import { BasicPoint, Point } from './point';
 import { throttle } from './throttle';
 
 declare global {
-  // tslint:disable-next-line:interface-name
-  interface Window {
-    PointerEvent: typeof PointerEvent;
+  interface CSSStyleDeclaration {
+    msTouchAction: string | null;
   }
 }
 
-export interface IOptions {
+export interface Options {
   dotSize?: number | (() => number);
   minWidth?: number;
   maxWidth?: number;
@@ -33,9 +32,9 @@ export interface IOptions {
   onEnd?: (event: MouseEvent | Touch) => void;
 }
 
-export interface IPointGroup {
+export interface PointGroup {
   color: string;
-  points: IBasicPoint[];
+  points: BasicPoint[];
 }
 
 export default class SignaturePad {
@@ -57,7 +56,7 @@ export default class SignaturePad {
   private _mouseButtonDown: boolean;
   private _isEmpty: boolean;
   private _lastPoints: Point[]; // Stores up to 4 most recent points; used to generate a new curve
-  private _data: IPointGroup[]; // Stores all points in groups (one group per line or dot)
+  private _data: PointGroup[]; // Stores all points in groups (one group per line or dot)
   private _lastVelocity: number;
   private _lastWidth: number;
   private _strokeMoveUpdate: (event: MouseEvent | Touch) => void;
@@ -65,7 +64,7 @@ export default class SignaturePad {
 
   constructor(
     private canvas: HTMLCanvasElement,
-    private options: IOptions = {},
+    private options: Options = {},
   ) {
     this.velocityFilterWeight = options.velocityFilterWeight || 0.7;
     this.minWidth = options.minWidth || 0.5;
@@ -74,19 +73,9 @@ export default class SignaturePad {
     this.minDistance = ('minDistance' in options
       ? options.minDistance
       : 5) as number; // in pixels
-
-    if (this.throttle) {
-      this._strokeMoveUpdate = throttle(
-        SignaturePad.prototype._strokeUpdate,
-        this.throttle,
-      );
-    } else {
-      this._strokeMoveUpdate = SignaturePad.prototype._strokeUpdate;
-    }
-
     this.dotSize =
       options.dotSize ||
-      function dotSize(this: SignaturePad) {
+      function dotSize(this: SignaturePad): number {
         return (this.minWidth + this.maxWidth) / 2;
       };
     this.penColor = options.penColor || 'black';
@@ -94,7 +83,11 @@ export default class SignaturePad {
     this.onBegin = options.onBegin;
     this.onEnd = options.onEnd;
 
+    this._strokeMoveUpdate = this.throttle
+      ? throttle(SignaturePad.prototype._strokeUpdate, this.throttle)
+      : SignaturePad.prototype._strokeUpdate;
     this._ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
+
     this.clear();
 
     // Enable mouse and touch event handlers
@@ -102,8 +95,7 @@ export default class SignaturePad {
   }
 
   public clear(): void {
-    const ctx = this._ctx;
-    const canvas = this.canvas;
+    const { _ctx: ctx, canvas } = this;
 
     // Clear canvas using background color
     ctx.fillStyle = this.backgroundColor;
@@ -118,7 +110,7 @@ export default class SignaturePad {
   public fromDataURL(
     dataUrl: string,
     options: { ratio?: number; width?: number; height?: number } = {},
-    callback?: (error?: ErrorEvent) => void,
+    callback?: (error?: string | Event) => void,
   ): void {
     const image = new Image();
     const ratio = options.ratio || window.devicePixelRatio || 1;
@@ -127,13 +119,13 @@ export default class SignaturePad {
 
     this._reset();
 
-    image.onload = () => {
+    image.onload = (): void => {
       this._ctx.drawImage(image, 0, 0, width, height);
       if (callback) {
         callback();
       }
     };
-    image.onerror = (error) => {
+    image.onerror = (error): void => {
       if (callback) {
         callback(error);
       }
@@ -143,7 +135,7 @@ export default class SignaturePad {
     this._isEmpty = false;
   }
 
-  public toDataURL(type = 'image/png', encoderOptions?: number) {
+  public toDataURL(type = 'image/png', encoderOptions?: number): string {
     switch (type) {
       case 'image/svg+xml':
         return this._toSVG();
@@ -190,7 +182,7 @@ export default class SignaturePad {
     return this._isEmpty;
   }
 
-  public fromData(pointGroups: IPointGroup[]): void {
+  public fromData(pointGroups: PointGroup[]): void {
     this.clear();
 
     this._fromData(
@@ -202,7 +194,7 @@ export default class SignaturePad {
     this._data = pointGroups;
   }
 
-  public toData(): IPointGroup[] {
+  public toData(): PointGroup[] {
     return this._data;
   }
 
@@ -272,6 +264,13 @@ export default class SignaturePad {
   }
 
   private _strokeUpdate(event: MouseEvent | Touch): void {
+    if (this._data.length === 0) {
+      // This can happen if clear() was called while a signature is still in progress,
+      // or if there is a race condition between start/update events.
+      this._strokeBegin(event);
+      return;
+    }
+
     const x = event.clientX;
     const y = event.clientY;
 
@@ -435,7 +434,10 @@ export default class SignaturePad {
       y += 3 * u * tt * curve.control2.y;
       y += ttt * curve.endPoint.y;
 
-      const width = Math.min(curve.startWidth + ttt * widthDelta, this.maxWidth);
+      const width = Math.min(
+        curve.startWidth + ttt * widthDelta,
+        this.maxWidth,
+      );
       this._drawCurveSegment(x, y, width);
     }
 
@@ -448,7 +450,7 @@ export default class SignaturePad {
     point,
   }: {
     color: string;
-    point: IBasicPoint;
+    point: BasicPoint;
   }): void {
     const ctx = this._ctx;
     const width =
@@ -462,7 +464,7 @@ export default class SignaturePad {
   }
 
   private _fromData(
-    pointGroups: IPointGroup[],
+    pointGroups: PointGroup[],
     drawCurve: SignaturePad['_drawCurve'],
     drawDot: SignaturePad['_drawDot'],
   ): void {
@@ -504,12 +506,12 @@ export default class SignaturePad {
     const ratio = Math.max(window.devicePixelRatio || 1, 1);
     const minX = 0;
     const minY = 0;
-    const canvasWidth = this.canvas.width;
-    const canvasHeight = this.canvas.height;
+    const maxX = this.canvas.width / ratio;
+    const maxY = this.canvas.height / ratio;
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
 
-    svg.setAttribute('width', canvasWidth.toString());
-    svg.setAttribute('height', canvasHeight.toString());
+    svg.setAttribute('width', this.canvas.width.toString());
+    svg.setAttribute('height', this.canvas.height.toString());
 
     this._fromData(
       pointGroups,
@@ -545,7 +547,7 @@ export default class SignaturePad {
         /* eslint-enable no-restricted-globals */
       },
 
-      ({ color, point }: { color: string; point: IBasicPoint }) => {
+      ({ color, point }: { color: string; point: BasicPoint }) => {
         const circle = document.createElement('circle');
         const dotSize =
           typeof this.dotSize === 'function' ? this.dotSize() : this.dotSize;
@@ -563,7 +565,9 @@ export default class SignaturePad {
       '<svg' +
       ' xmlns="http://www.w3.org/2000/svg"' +
       ' xmlns:xlink="http://www.w3.org/1999/xlink"' +
-      ` viewBox="${minX} ${minY} ${canvasWidth} ${canvasHeight}"` +
+      ` viewBox="${minX} ${minY} ${maxX} ${maxY}"` +
+      ` width="${maxX}"` +
+      ` height="${maxY}"` +
       '>';
     let body = svg.innerHTML;
 

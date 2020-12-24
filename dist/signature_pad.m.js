@@ -437,11 +437,11 @@ class SignaturePad {
         const ratio = Math.max(window.devicePixelRatio || 1, 1);
         const minX = 0;
         const minY = 0;
-        const canvasWidth = this.canvas.width;
-        const canvasHeight = this.canvas.height;
+        const maxX = this.canvas.width / ratio;
+        const maxY = this.canvas.height / ratio;
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        svg.setAttribute('width', canvasWidth.toString());
-        svg.setAttribute('height', canvasHeight.toString());
+        svg.setAttribute('width', this.canvas.width.toString());
+        svg.setAttribute('height', this.canvas.height.toString());
         this._fromData(pointGroups, ({ color, curve }) => {
             const path = document.createElement('path');
             if (!isNaN(curve.control1.x) &&
@@ -472,7 +472,9 @@ class SignaturePad {
         const header = '<svg' +
             ' xmlns="http://www.w3.org/2000/svg"' +
             ' xmlns:xlink="http://www.w3.org/1999/xlink"' +
-            ` viewBox="${minX} ${minY} ${canvasWidth} ${canvasHeight}"` +
+            ` viewBox="${minX} ${minY} ${maxX} ${maxY}"` +
+            ` width="${maxX}"` +
+            ` height="${maxY}"` +
             '>';
         let body = svg.innerHTML;
         if (body === undefined) {

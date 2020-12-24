@@ -462,11 +462,11 @@ var SignaturePad = (function () {
         var ratio = Math.max(window.devicePixelRatio || 1, 1);
         var minX = 0;
         var minY = 0;
-        var canvasWidth = this.canvas.width;
-        var canvasHeight = this.canvas.height;
+        var maxX = this.canvas.width / ratio;
+        var maxY = this.canvas.height / ratio;
         var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        svg.setAttribute('width', canvasWidth.toString());
-        svg.setAttribute('height', canvasHeight.toString());
+        svg.setAttribute('width', this.canvas.width.toString());
+        svg.setAttribute('height', this.canvas.height.toString());
         this._fromData(pointGroups, function (_a) {
             var color = _a.color, curve = _a.curve;
             var path = document.createElement('path');
@@ -499,7 +499,9 @@ var SignaturePad = (function () {
         var header = '<svg' +
             ' xmlns="http://www.w3.org/2000/svg"' +
             ' xmlns:xlink="http://www.w3.org/1999/xlink"' +
-            (" viewBox=\"" + minX + " " + minY + " " + canvasWidth + " " + canvasHeight + "\"") +
+            (" viewBox=\"" + minX + " " + minY + " " + maxX + " " + maxY + "\"") +
+            (" width=\"" + maxX + "\"") +
+            (" height=\"" + maxY + "\"") +
             '>';
         var body = svg.innerHTML;
         if (body === undefined) {
