@@ -1,8 +1,8 @@
-import { IBasicPoint, Point } from './point';
+import { BasicPoint, Point } from './point';
 export declare class Bezier {
     startPoint: Point;
-    control2: IBasicPoint;
-    control1: IBasicPoint;
+    control2: BasicPoint;
+    control1: BasicPoint;
     endPoint: Point;
     startWidth: number;
     endWidth: number;
@@ -11,7 +11,7 @@ export declare class Bezier {
         end: number;
     }): Bezier;
     private static calculateControlPoints;
-    constructor(startPoint: Point, control2: IBasicPoint, control1: IBasicPoint, endPoint: Point, startWidth: number, endWidth: number);
+    constructor(startPoint: Point, control2: BasicPoint, control1: BasicPoint, endPoint: Point, startWidth: number, endWidth: number);
     length(): number;
     private point;
 }
